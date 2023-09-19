@@ -11,7 +11,7 @@ enum Cell {
     Empty,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 enum GameState {
     Player1Win,
     Player2Win,
@@ -34,7 +34,7 @@ struct Game {
 }
 
 impl Game {
-    fn new(&self) -> Self {
+    fn new() -> Self {
         Self {
             board: [Cell::Empty; (WIDTH * HEIGHT) as usize],
             state: GameState::Ongoing,
@@ -81,7 +81,7 @@ impl Game {
 
         self.count += 1;
 
-        if self.check_win() {
+        if self.check_win(position) {
             match current_turn {
                 Turns::Player1Turn => self.state = GameState::Player1Win,
                 _ => self.state = GameState::Player2Win,
@@ -101,19 +101,51 @@ impl Game {
         false
     }
 
-    fn check_win(&self) -> bool {
-        self.check_win_horizontal() || self.check_win_veritcal() || self.check_win_diagonal()
+    fn check_win(&self, pos: usize) -> bool {
+        self.check_win_horizontal(pos)
+            || self.check_win_veritcal(pos)
+            || self.check_win_diagonal(pos)
     }
 
-    fn check_win_horizontal(&self) -> bool {
+    fn check_win_horizontal(&self, pos: usize) -> bool {
         unimplemented!()
     }
 
-    fn check_win_veritcal(&self) -> bool {
+    fn check_win_veritcal(&self, pos: usize) -> bool {
         unimplemented!()
     }
 
-    fn check_win_diagonal(&self) -> bool {
+    fn check_win_diagonal(&self, pos: usize) -> bool {
         unimplemented!()
     }
+}
+
+impl From<String> for Game {
+    fn from(value: String) -> Self {
+        let mut game = Game::new();
+
+        for col in value.chars() {
+            game.play(col as usize);
+        }
+
+        game
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::game::{Game, GameState};
+
+    #[test]
+    fn instantiate_game() {
+        let mut x = Game::new();
+        assert_eq!(x.can_play(1), (true, 1));
+        assert_eq!(x.play(1), GameState::Ongoing);
+    }
+
+    #[test]
+    fn check_win() {}
+
+    #[test]
+    fn instantiate_from_string() {}
 }
