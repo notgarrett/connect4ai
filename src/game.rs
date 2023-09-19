@@ -19,12 +19,13 @@ enum GameState {
     Ongoing,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 enum Turns {
     Player1Turn,
     Player2Turn,
 }
 
+#[derive(Clone, Copy)]
 struct Game {
     board: [Cell; (WIDTH * HEIGHT) as usize],
     state: GameState,
@@ -92,15 +93,27 @@ impl Game {
         self.state.clone()
     }
 
-    fn is_winning_move(&self, col: usize) {
-        unimplemented!()
+    fn is_winning_move(&self, col: usize) -> bool {
+        let mut test = self.clone();
+        if let GameState::Player1Win | GameState::Player2Win = test.play(col) {
+            return true;
+        }
+        false
     }
 
     fn check_win(&self) -> bool {
-        unimplemented!()
+        self.check_win_horizontal() || self.check_win_veritcal() || self.check_win_diagonal()
     }
 
     fn check_win_horizontal(&self) -> bool {
+        unimplemented!()
+    }
+
+    fn check_win_veritcal(&self) -> bool {
+        unimplemented!()
+    }
+
+    fn check_win_diagonal(&self) -> bool {
         unimplemented!()
     }
 }
