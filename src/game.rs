@@ -6,9 +6,9 @@ const HEIGHT: i32 = 6;
 
 #[derive(Clone, Copy)]
 enum Cell {
-    Player1,
-    Player2,
-    Empty,
+    Player1 = 1,
+    Player2 = 2,
+    Empty = 3,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -45,12 +45,11 @@ impl Game {
 
     fn can_play(&self, col: usize) -> (bool, usize) {
         if let GameState::Ongoing = self.state {
-            println!("Game is ongoing!");
         } else {
             return (false, 0);
         }
 
-        for x in 0..5 {
+        for x in 0..=5 {
             if let Cell::Empty = self.board[col + (x * 7) as usize] {
                 return (true, col + (x * 7) as usize);
             }
@@ -66,15 +65,11 @@ impl Game {
             return GameState::Ongoing;
         }
 
-        let current_turn = self.turn.clone();
-
         match self.turn {
             Turns::Player1Turn => {
-                self.turn = Turns::Player2Turn;
                 self.board[position] = Cell::Player1;
             }
             Turns::Player2Turn => {
-                self.turn = Turns::Player1Turn;
                 self.board[position] = Cell::Player2;
             }
         };
@@ -82,13 +77,18 @@ impl Game {
         self.count += 1;
 
         if self.check_win(position) {
-            match current_turn {
+            match self.turn {
                 Turns::Player1Turn => self.state = GameState::Player1Win,
                 _ => self.state = GameState::Player2Win,
             };
         } else if self.count == 42 {
             self.state = GameState::Draw;
         }
+
+        match self.turn {
+            Turns::Player1Turn => self.turn = Turns::Player2Turn,
+            _ => self.turn = Turns::Player1Turn,
+        };
 
         self.state.clone()
     }
@@ -118,6 +118,50 @@ impl Game {
     fn check_win_diagonal(&self, pos: usize) -> bool {
         unimplemented!()
     }
+
+    fn recursive_check_win_vertical(&self, pos: i32, mut count: usize, turn: Turns) -> bool {
+        if pos < 0 {
+            return false;
+        }
+
+        if count == 4 {
+            return true;
+        }
+
+        match self.board[pos as usize] {
+            Cell::Player1 => {
+                if let Turns::Player1Turn = turn {
+                    count += 1;
+                } else {
+                    count = 0;
+                }
+            }
+            Cell::Player2 => {
+                if let Turns::Player2Turn = turn {
+                    count += 1;
+                } else {
+                    count = 0;
+                }
+            }
+            _ => count = 0,
+        }
+
+        self.recursive_check_win_vertical(pos - 7, count, turn)
+    }
+
+    fn display_board(&self) {
+        for row in (0..=5).rev() {
+            for col in 0..=6 {
+                match self.board[col + (7 * row) as usize] {
+                    Cell::Player1 => print!("1 "),
+                    Cell::Player2 => print!("2 "),
+                    Cell::Empty => print!("x "),
+                };
+            }
+            println!();
+        }
+        println!();
+    }
 }
 
 impl From<String> for Game {
@@ -139,8 +183,10 @@ mod tests {
     #[test]
     fn instantiate_game() {
         let mut x = Game::new();
+        x.display_board();
         assert_eq!(x.can_play(1), (true, 1));
         assert_eq!(x.play(1), GameState::Ongoing);
+        x.display_board();
     }
 
     #[test]
