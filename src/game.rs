@@ -4,7 +4,7 @@
 const WIDTH: i32 = 7;
 const HEIGHT: i32 = 6;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 enum Cell {
     Player1 = 1,
     Player2 = 2,
@@ -102,57 +102,48 @@ impl Game {
     }
 
     fn check_win(&self, pos: usize) -> bool {
+        let cell;
+
+        match self.turn {
+            Turns::Player1Turn => cell = Cell::Player1,
+            _ => cell = Cell::Player2,
+        };
+
         self.check_win_horizontal(pos)
             || self.check_win_veritcal(pos)
             || self.check_win_diagonal(pos)
     }
 
     fn check_win_horizontal(&self, pos: usize) -> bool {
-        unimplemented!()
+        // self.recursive_check_win_vertical(pos as i32, 0)
+
+        let mut count = 0;
+        let iter = 1..4;
+        iter.for_each(|iteration| {
+            if self.board[pos] == self.board[pos - 7 * iteration] {
+                count += 1;
+            }
+        });
+
+        if count == 3 {
+            true
+        } else {
+            false
+        }
     }
 
     fn check_win_veritcal(&self, pos: usize) -> bool {
-        unimplemented!()
+        false
     }
 
     fn check_win_diagonal(&self, pos: usize) -> bool {
-        unimplemented!()
-    }
-
-    fn recursive_check_win_vertical(&self, pos: i32, mut count: usize, turn: Turns) -> bool {
-        if pos < 0 {
-            return false;
-        }
-
-        if count == 4 {
-            return true;
-        }
-
-        match self.board[pos as usize] {
-            Cell::Player1 => {
-                if let Turns::Player1Turn = turn {
-                    count += 1;
-                } else {
-                    count = 0;
-                }
-            }
-            Cell::Player2 => {
-                if let Turns::Player2Turn = turn {
-                    count += 1;
-                } else {
-                    count = 0;
-                }
-            }
-            _ => count = 0,
-        }
-
-        self.recursive_check_win_vertical(pos - 7, count, turn)
+        false
     }
 
     fn display_board(&self) {
         for row in (0..=5).rev() {
             for col in 0..=6 {
-                match self.board[col + (7 * row) as usize] {
+                match self.board[col + (WIDTH * row) as usize] {
                     Cell::Player1 => print!("1 "),
                     Cell::Player2 => print!("2 "),
                     Cell::Empty => print!("x "),
@@ -164,13 +155,15 @@ impl Game {
     }
 }
 
-impl From<String> for Game {
-    fn from(value: String) -> Self {
+impl From<&str> for Game {
+    fn from(value: &str) -> Self {
         let mut game = Game::new();
 
-        for col in value.chars() {
-            game.play(col as usize);
-        }
+        value.chars().for_each(|col| {
+            // This turns the column value into a base 10 digit, then converts it to a usize. You
+            // could also do "col as usize - '0' as usize", which is a fancy ascii hack.
+            game.play(col.to_digit(10).unwrap() as usize);
+        });
 
         game
     }
@@ -183,15 +176,25 @@ mod tests {
     #[test]
     fn instantiate_game() {
         let mut x = Game::new();
-        x.display_board();
         assert_eq!(x.can_play(1), (true, 1));
         assert_eq!(x.play(1), GameState::Ongoing);
-        x.display_board();
     }
 
     #[test]
-    fn check_win() {}
+    fn check_win_veritcal() {
+        let mut x = Game::new();
+        x.play(1);
+        x.play(2);
+        x.play(1);
+        x.play(2);
+        x.play(1);
+        x.play(2);
+        assert_eq!(x.play(1), GameState::Player1Win);
+    }
 
     #[test]
-    fn instantiate_from_string() {}
+    fn instantiate_from_string() {
+        let x = Game::from("1554323221");
+        x.display_board();
+    }
 }
