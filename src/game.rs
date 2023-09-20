@@ -117,10 +117,13 @@ impl Game {
     fn check_win_horizontal(&self, pos: usize) -> bool {
         // self.recursive_check_win_vertical(pos as i32, 0)
 
+        if pos < ((3 * WIDTH) - 1) as usize {
+            return false;
+        }
         let mut count = 0;
         let iter = 1..4;
         iter.for_each(|iteration| {
-            if self.board[pos] == self.board[pos - 7 * iteration] {
+            if self.board[pos] == self.board[pos - WIDTH as usize * iteration] {
                 count += 1;
             }
         });
