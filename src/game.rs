@@ -129,6 +129,11 @@ impl Game {
     fn check_win_horizontal(&self, pos: usize) -> bool {
         let mut count = 0;
         let row = self.get_row(pos);
+        // Plan to incorperate this method in when I am not so lazy and decide to optimize this
+        // function, until then, I can start working on the algorithm, the (hopefully) fun part.
+
+        // let upper_bound = row as i32 * WIDTH - 1;
+        // let lower_bound = (row as i32 - 1) * WIDTH + 1;
 
         // I want to do a functional or iteration based approach here, but I am struggling to stop
         // the control flow. Will have to look into it.
@@ -150,19 +155,98 @@ impl Game {
     }
 
     fn check_win_diagonal(&self, pos: usize) -> bool {
-        false
+        self.check_win_diagonal_left(pos) || self.check_win_diagonal_right(pos)
+    }
+
+    fn check_win_diagonal_left(&self, pos: usize) -> bool {
+        let mut count = 0;
+
+        let row = self.get_row(pos);
+        let upper_bound = row as i32 * WIDTH - 1;
+        let lower_bound = (row as i32 - 1) * WIDTH + 1;
+
+        if pos as i32 + 3 <= upper_bound {
+            for iteration in 1..4 {
+                let evaluated_position = pos as i32 + WIDTH * iteration + iteration;
+                if evaluated_position > (WIDTH * HEIGHT) - 1 {
+                    break;
+                }
+
+                if self.board[pos] == self.board[evaluated_position as usize] {
+                    count += 1
+                } else {
+                    break;
+                }
+            }
+        } else if pos as i32 - 3 >= lower_bound {
+            for iteration in 1..4 {
+                let evaluated_position = pos as i32 - WIDTH * iteration - iteration;
+                if evaluated_position < 0 {
+                    break;
+                }
+
+                if self.board[pos] == self.board[evaluated_position as usize] {
+                    count += 1
+                } else {
+                    break;
+                }
+            }
+        }
+
+        println!("{}", count);
+
+        if count >= 3 {
+            true
+        } else {
+            false
+        }
+    }
+
+    fn check_win_diagonal_right(&self, pos: usize) -> bool {
+        let mut count = 0;
+
+        let row = self.get_row(pos);
+        let upper_bound = row as i32 * WIDTH - 1;
+        let lower_bound = (row as i32 - 1) * WIDTH + 1;
+
+        if pos as i32 + 3 >= upper_bound {
+            for iteration in 1..4 {
+                let evaluated_position = pos as i32 + WIDTH * iteration - iteration;
+                if evaluated_position > (WIDTH * HEIGHT) - 1 {
+                    break;
+                }
+
+                if self.board[pos] == self.board[evaluated_position as usize] {
+                    count += 1
+                } else {
+                    break;
+                }
+            }
+        } else if pos as i32 - 3 <= lower_bound {
+            for iteration in 1..4 {
+                let evaluated_position = pos as i32 - WIDTH * iteration + iteration;
+                if evaluated_position < 0 {
+                    break;
+                }
+
+                if self.board[pos] == self.board[evaluated_position as usize] {
+                    count += 1
+                } else {
+                    break;
+                }
+            }
+        }
+
+        println!("{}", count);
+        if count >= 3 {
+            true
+        } else {
+            false
+        }
     }
 
     fn get_row(&self, pos: usize) -> usize {
         pos / WIDTH as usize
-    }
-
-    fn get_bottom_possible_diagonal_left(&self, pos: usize) -> usize {
-        todo!()
-    }
-
-    fn get_bottom_possible_diagonal_right(&self, pos: usize) -> usize {
-        todo!()
     }
 
     fn display_board(&self) {
@@ -223,5 +307,12 @@ mod tests {
     fn instantiate_from_string() {
         let x = Game::from("1554323221");
         x.display_board();
+    }
+
+    #[test]
+    fn check_win_diagonals() {
+        let mut x = Game::from("0112232335");
+        x.display_board();
+        assert_eq!(x.play(3), GameState::Player1Win);
     }
 }
