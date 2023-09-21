@@ -102,21 +102,12 @@ impl Game {
     }
 
     fn check_win(&self, pos: usize) -> bool {
-        let cell;
-
-        match self.turn {
-            Turns::Player1Turn => cell = Cell::Player1,
-            _ => cell = Cell::Player2,
-        };
-
         self.check_win_horizontal(pos)
-            || self.check_win_veritcal(pos)
+            || self.check_win_vertical(pos)
             || self.check_win_diagonal(pos)
     }
 
-    fn check_win_horizontal(&self, pos: usize) -> bool {
-        // self.recursive_check_win_vertical(pos as i32, 0)
-
+    fn check_win_vertical(&self, pos: usize) -> bool {
         if pos < ((3 * WIDTH) - 1) as usize {
             return false;
         }
@@ -135,12 +126,43 @@ impl Game {
         }
     }
 
-    fn check_win_veritcal(&self, pos: usize) -> bool {
+    fn check_win_horizontal(&self, pos: usize) -> bool {
+        let mut count = 0;
+        let row = self.get_row(pos);
+
+        // I want to do a functional or iteration based approach here, but I am struggling to stop
+        // the control flow. Will have to look into it.
+        for iteration in 1..WIDTH as usize {
+            if self.board[pos] == self.board[iteration + WIDTH as usize * row] {
+                count += 1;
+                if count == 4 {
+                    return true;
+                }
+            } else {
+                count = 1;
+                if iteration > 4 {
+                    return false;
+                }
+            }
+        }
+
         false
     }
 
     fn check_win_diagonal(&self, pos: usize) -> bool {
         false
+    }
+
+    fn get_row(&self, pos: usize) -> usize {
+        pos / WIDTH as usize
+    }
+
+    fn get_bottom_possible_diagonal_left(&self, pos: usize) -> usize {
+        todo!()
+    }
+
+    fn get_bottom_possible_diagonal_right(&self, pos: usize) -> usize {
+        todo!()
     }
 
     fn display_board(&self) {
@@ -185,14 +207,16 @@ mod tests {
 
     #[test]
     fn check_win_veritcal() {
-        let mut x = Game::new();
-        x.play(1);
-        x.play(2);
-        x.play(1);
-        x.play(2);
-        x.play(1);
-        x.play(2);
+        let mut x = Game::from("121212");
+        x.display_board();
         assert_eq!(x.play(1), GameState::Player1Win);
+    }
+
+    #[test]
+    fn check_win_horizontal() {
+        let mut x = Game::from("112233");
+        x.display_board();
+        assert_eq!(x.play(4), GameState::Player1Win);
     }
 
     #[test]
