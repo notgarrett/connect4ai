@@ -1,18 +1,18 @@
 // Connect 4 sucks ass
 //
 
-const WIDTH: i32 = 7;
-const HEIGHT: i32 = 6;
+pub const WIDTH: i32 = 7;
+pub const HEIGHT: i32 = 6;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum Cell {
+pub enum Cell {
     Player1 = 1,
     Player2 = 2,
     Empty = 3,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-enum GameState {
+pub enum GameState {
     Player1Win,
     Player2Win,
     Draw,
@@ -20,13 +20,13 @@ enum GameState {
 }
 
 #[derive(Clone, Copy)]
-enum Turns {
+pub enum Turns {
     Player1Turn,
     Player2Turn,
 }
 
 #[derive(Clone, Copy)]
-struct Game {
+pub struct Game {
     board: [Cell; (WIDTH * HEIGHT) as usize],
     state: GameState,
     turn: Turns,
@@ -34,7 +34,7 @@ struct Game {
 }
 
 impl Game {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             board: [Cell::Empty; (WIDTH * HEIGHT) as usize],
             state: GameState::Ongoing,
@@ -43,7 +43,7 @@ impl Game {
         }
     }
 
-    fn can_play(&self, col: usize) -> (bool, usize) {
+    pub fn can_play(&self, col: usize) -> (bool, usize) {
         if let GameState::Ongoing = self.state {
         } else {
             return (false, 0);
@@ -58,7 +58,7 @@ impl Game {
         (false, 0)
     }
 
-    fn play(&mut self, col: usize) -> GameState {
+    pub fn play(&mut self, col: usize) -> GameState {
         let (playable, position) = self.can_play(col);
 
         if playable == false {
@@ -93,7 +93,15 @@ impl Game {
         self.state.clone()
     }
 
-    fn is_winning_move(&self, col: usize) -> bool {
+    pub fn state(&self) -> GameState {
+        self.state
+    }
+
+    pub fn count(&self) -> usize {
+        self.count
+    }
+
+    pub fn is_winning_move(&self, col: usize) -> bool {
         let mut test = self.clone();
         if let GameState::Player1Win | GameState::Player2Win = test.play(col) {
             return true;
@@ -108,7 +116,7 @@ impl Game {
     }
 
     fn check_win_vertical(&self, pos: usize) -> bool {
-        if pos < ((3 * WIDTH) - 1) as usize {
+        if pos < (3 * WIDTH) as usize {
             return false;
         }
         let mut count = 0;
@@ -193,8 +201,6 @@ impl Game {
             }
         }
 
-        println!("{}", count);
-
         if count >= 3 {
             true
         } else {
@@ -237,7 +243,6 @@ impl Game {
             }
         }
 
-        println!("{}", count);
         if count >= 3 {
             true
         } else {
@@ -249,7 +254,7 @@ impl Game {
         pos / WIDTH as usize
     }
 
-    fn display_board(&self) {
+    pub fn display_board(&self) {
         for row in (0..=5).rev() {
             for col in 0..=6 {
                 match self.board[col + (WIDTH * row) as usize] {
@@ -292,27 +297,29 @@ mod tests {
     #[test]
     fn check_win_veritcal() {
         let mut x = Game::from("121212");
-        x.display_board();
         assert_eq!(x.play(1), GameState::Player1Win);
     }
 
     #[test]
     fn check_win_horizontal() {
         let mut x = Game::from("112233");
-        x.display_board();
         assert_eq!(x.play(4), GameState::Player1Win);
     }
 
     #[test]
     fn instantiate_from_string() {
         let x = Game::from("1554323221");
-        x.display_board();
     }
 
     #[test]
     fn check_win_diagonals() {
         let mut x = Game::from("0112232335");
-        x.display_board();
         assert_eq!(x.play(3), GameState::Player1Win);
+    }
+
+    #[test]
+    fn fill_board() {
+        let mut x = Game::from("123456123456123456");
+        x.play(2);
     }
 }
