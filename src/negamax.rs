@@ -46,7 +46,7 @@ mod tests {
 
     #[test]
     fn completetion_test() {
-        let x = game::Game::from("2");
+        let x = game::Game::from("0011223");
         let y = negamax(&x, -1000000, 1000000);
         println!("{}", y);
     }

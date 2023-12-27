@@ -1,6 +1,3 @@
-// Connect 4 sucks ass
-//
-
 pub const WIDTH: i32 = 7;
 pub const HEIGHT: i32 = 6;
 
@@ -104,9 +101,10 @@ impl Game {
     pub fn is_winning_move(&self, col: usize) -> bool {
         let mut test = self.clone();
         if let GameState::Player1Win | GameState::Player2Win = test.play(col) {
-            return true;
+            true
+        } else {
+            false
         }
-        false
     }
 
     fn check_win(&self, pos: usize) -> bool {
@@ -308,7 +306,7 @@ mod tests {
 
     #[test]
     fn instantiate_from_string() {
-        let x = Game::from("1554323221");
+        let _x = Game::from("1554323221");
     }
 
     #[test]
