@@ -143,14 +143,14 @@ impl Game {
 
         // I want to do a functional or iteration based approach here, but I am struggling to stop
         // the control flow. Will have to look into it.
-        for iteration in 1..WIDTH as usize {
+        for iteration in 0..WIDTH as usize {
             if self.board[pos] == self.board[iteration + WIDTH as usize * row] {
                 count += 1;
                 if count == 4 {
                     return true;
                 }
             } else {
-                count = 1;
+                count = 0;
                 if iteration > 4 {
                     return false;
                 }
@@ -168,34 +168,39 @@ impl Game {
         let mut count = 0;
 
         let row = self.get_row(pos);
-        let upper_bound = row as i32 * WIDTH - 1;
-        let lower_bound = (row as i32 - 1) * WIDTH + 1;
+        let upper_bound = row as i32 * WIDTH - 1 + WIDTH;
+        let lower_bound = (row as i32 - 1) * WIDTH + WIDTH;
 
-        if pos as i32 + 3 <= upper_bound {
-            for iteration in 1..4 {
-                let evaluated_position = pos as i32 + WIDTH * iteration + iteration;
-                if evaluated_position > (WIDTH * HEIGHT) - 1 {
-                    break;
-                }
-
-                if self.board[pos] == self.board[evaluated_position as usize] {
-                    count += 1
-                } else {
-                    break;
-                }
+        for iteration in 1..4 {
+            if pos as i32 + iteration > upper_bound {
+                break;
             }
-        } else if pos as i32 - 3 >= lower_bound {
-            for iteration in 1..4 {
-                let evaluated_position = pos as i32 - WIDTH * iteration - iteration;
-                if evaluated_position < 0 {
-                    break;
-                }
 
-                if self.board[pos] == self.board[evaluated_position as usize] {
-                    count += 1
-                } else {
-                    break;
-                }
+            let evaluated_position = pos as i32 + WIDTH * iteration + iteration;
+            if evaluated_position > (WIDTH * HEIGHT) - 1 {
+                break;
+            }
+
+            if self.board[pos] == self.board[evaluated_position as usize] {
+                count += 1
+            } else {
+                break;
+            }
+        }
+        for iteration in 1..4 {
+            if pos as i32 - iteration < lower_bound {
+                break;
+            }
+
+            let evaluated_position = pos as i32 - WIDTH * iteration - iteration;
+            if evaluated_position < 0 {
+                break;
+            }
+
+            if self.board[pos] == self.board[evaluated_position as usize] {
+                count += 1
+            } else {
+                break;
             }
         }
 
@@ -210,34 +215,37 @@ impl Game {
         let mut count = 0;
 
         let row = self.get_row(pos);
-        let upper_bound = row as i32 * WIDTH - 1;
-        let lower_bound = (row as i32 - 1) * WIDTH + 1;
+        let upper_bound = row as i32 * WIDTH - 1 + WIDTH;
+        let lower_bound = (row as i32 - 1) * WIDTH + WIDTH;
 
-        if pos as i32 + 3 >= upper_bound {
-            for iteration in 1..4 {
-                let evaluated_position = pos as i32 + WIDTH * iteration - iteration;
-                if evaluated_position > (WIDTH * HEIGHT) - 1 {
-                    break;
-                }
-
-                if self.board[pos] == self.board[evaluated_position as usize] {
-                    count += 1
-                } else {
-                    break;
-                }
+        for iteration in 1..4 {
+            if pos as i32 + iteration < lower_bound {
+                break;
             }
-        } else if pos as i32 - 3 <= lower_bound {
-            for iteration in 1..4 {
-                let evaluated_position = pos as i32 - WIDTH * iteration + iteration;
-                if evaluated_position < 0 {
-                    break;
-                }
+            let evaluated_position = pos as i32 + WIDTH * iteration - iteration;
+            if evaluated_position > (WIDTH * HEIGHT) - 1 {
+                break;
+            }
 
-                if self.board[pos] == self.board[evaluated_position as usize] {
-                    count += 1
-                } else {
-                    break;
-                }
+            if self.board[pos] == self.board[evaluated_position as usize] {
+                count += 1
+            } else {
+                break;
+            }
+        }
+        for iteration in 1..4 {
+            if pos as i32 - iteration > upper_bound {
+                break;
+            }
+            let evaluated_position = pos as i32 - WIDTH * iteration + iteration;
+            if evaluated_position < 0 {
+                break;
+            }
+
+            if self.board[pos] == self.board[evaluated_position as usize] {
+                count += 1
+            } else {
+                break;
             }
         }
 
@@ -312,7 +320,11 @@ mod tests {
     #[test]
     fn check_win_diagonals() {
         let mut x = Game::from("0112232335");
+        let mut y = Game::from("5443323220");
+
         assert_eq!(x.play(3), GameState::Player1Win);
+
+        assert_eq!(y.play(2), GameState::Player1Win);
     }
 
     #[test]
