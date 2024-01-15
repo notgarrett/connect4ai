@@ -6,7 +6,7 @@ pub fn negamax(position: &Game, mut alpha: i32, mut beta: i32) -> i32 {
     }
 
     for i in 0..WIDTH as usize {
-        if position.can_play(i).0 && position.is_winning_move(i) {
+        if position.can_play(i).is_some() && position.is_winning_move(i) {
             return (WIDTH * HEIGHT + 1 - position.count() as i32) / 2;
         }
     }
@@ -21,10 +21,10 @@ pub fn negamax(position: &Game, mut alpha: i32, mut beta: i32) -> i32 {
     }
 
     let column_order = [3, 4, 5, 2, 1, 6, 0];
-    for i in 0..WIDTH as usize {
-        if position.can_play(column_order[i]).0 {
+    for i in column_order {
+        if let Some(_) = position.can_play(i) {
             let mut position2 = position.clone();
-            position2.play(column_order[i]);
+            position2.play(column_order[i]).unwrap();
             let score = -negamax(&position2, -beta, -alpha);
 
             if score >= beta {

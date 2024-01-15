@@ -30,6 +30,12 @@ pub struct Game {
     count: usize,
 }
 
+#[derive(Debug)]
+pub enum GameError {
+    CannotPlay,
+    OutOfBounds,
+}
+
 impl Game {
     pub fn new() -> Self {
         Self {
@@ -40,27 +46,32 @@ impl Game {
         }
     }
 
-    pub fn can_play(&self, col: usize) -> (bool, usize) {
+    pub fn can_play(&self, col: usize) -> Option<usize> {
         if let GameState::Ongoing = self.state {
         } else {
-            return (false, 0);
+            return None;
         }
 
         for x in 0..=5 {
             if let Cell::Empty = self.board[col + (x * 7) as usize] {
-                return (true, col + (x * 7) as usize);
+                return Some(col + (x * 7) as usize);
             }
         }
 
-        (false, 0)
+        None
     }
 
-    pub fn play(&mut self, col: usize) -> GameState {
-        let (playable, position) = self.can_play(col);
+    pub fn play(&mut self, col: usize) -> Result<GameState, GameError> {
+        // This is going to bite me in computation later, because player turns can get skipped.
 
-        if playable == false {
-            return GameState::Ongoing;
+        if col > (WIDTH * HEIGHT) as usize {
+            return Err(GameError::OutOfBounds);
         }
+
+        let position = match self.can_play(col) {
+            Some(x) => x,
+            None => return Err(GameError::CannotPlay),
+        };
 
         match self.turn {
             Turns::Player1Turn => {
@@ -87,7 +98,7 @@ impl Game {
             _ => self.turn = Turns::Player1Turn,
         };
 
-        self.state.clone()
+        Ok(self.state.clone())
     }
 
     pub fn state(&self) -> GameState {
@@ -100,7 +111,7 @@ impl Game {
 
     pub fn is_winning_move(&self, col: usize) -> bool {
         let mut test = self.clone();
-        if let GameState::Player1Win | GameState::Player2Win = test.play(col) {
+        if let Ok(GameState::Player1Win) | Ok(GameState::Player2Win) = test.play(col) {
             true
         } else {
             false
@@ -296,7 +307,7 @@ mod tests {
     #[test]
     fn instantiate_game() {
         let mut x = Game::new();
-        assert_eq!(x.can_play(1), (true, 1));
+        assert_eq!(x.can_play(1).unwrap(), 1);
         assert_eq!(x.play(1), GameState::Ongoing);
     }
 
