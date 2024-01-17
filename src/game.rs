@@ -1,11 +1,13 @@
+use crate::bitboard::Bitboard;
+
 pub const WIDTH: i32 = 7;
 pub const HEIGHT: i32 = 6;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Cell {
-    Player1 = 1,
-    Player2 = 2,
-    Empty = 3,
+    Player1,
+    Player2,
+    Empty,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -22,8 +24,11 @@ pub enum Turns {
     Player2Turn,
 }
 
+// The top most 1(s) will always reflect that the cell under it is a player 2 cell.
+
 #[derive(Clone, Copy)]
 pub struct Game {
+    bit_board: Bitboard,
     board: [Cell; (WIDTH * HEIGHT) as usize],
     state: GameState,
     turn: Turns,
@@ -39,6 +44,7 @@ pub enum GameError {
 impl Game {
     pub fn new() -> Self {
         Self {
+            bit_board: Bitboard::new(),
             board: [Cell::Empty; (WIDTH * HEIGHT) as usize],
             state: GameState::Ongoing,
             turn: Turns::Player1Turn,
@@ -53,17 +59,34 @@ impl Game {
         }
 
         for x in 0..=5 {
-            if let Cell::Empty = self.board[col + (x * 7) as usize] {
-                return Some(col + (x * 7) as usize);
+            if let Cell::Empty = self.board[col + (x * 7)] {
+                return Some(col + (x * 7));
             }
         }
 
+        for x in 0..=5 {
+            if !self.bit_board.get(col + (x * 7)) && !self.bit_board.get(col + (x * 7) + 7) {
+                return Some(col + (x * 7));
+            }
+        }
+        None
+    }
+
+    pub fn can_bb_play(&self, col: usize) -> Option<usize> {
+        if let GameState::Ongoing = self.state {
+        } else {
+            return None;
+        }
+
+        for x in 0..=5 {
+            if !self.bit_board.get(col + (x * 7)) && self.bit_board.get(col + (x * 7) + 7) {
+                return Some(col + (x * 7));
+            }
+        }
         None
     }
 
     pub fn play(&mut self, col: usize) -> Result<GameState, GameError> {
-        // This is going to bite me in computation later, because player turns can get skipped.
-
         if col > (WIDTH * HEIGHT) as usize {
             return Err(GameError::OutOfBounds);
         }
@@ -98,9 +121,47 @@ impl Game {
             _ => self.turn = Turns::Player1Turn,
         };
 
-        Ok(self.state.clone())
+        Ok(self.state)
     }
 
+    pub fn bb_play(&mut self, col: usize) -> Result<GameState, GameError> {
+        if col > (WIDTH * HEIGHT) as usize {
+            return Err(GameError::OutOfBounds);
+        }
+
+        let position = match self.can_bb_play(col) {
+            Some(x) => x,
+            None => return Err(GameError::CannotPlay),
+        };
+
+        match self.turn {
+            Turns::Player1Turn => {
+                self.bit_board.set(position, true).unwrap();
+            }
+            Turns::Player2Turn => {
+                self.bit_board.set(position + WIDTH as usize, true).unwrap();
+                self.bit_board.set(position, false).unwrap();
+            }
+        };
+
+        self.count += 1;
+
+        if self.check_win(position) {
+            match self.turn {
+                Turns::Player1Turn => self.state = GameState::Player1Win,
+                _ => self.state = GameState::Player2Win,
+            };
+        } else if self.count == 42 {
+            self.state = GameState::Draw;
+        }
+
+        match self.turn {
+            Turns::Player1Turn => self.turn = Turns::Player2Turn,
+            _ => self.turn = Turns::Player1Turn,
+        };
+
+        Ok(self.state)
+    }
     pub fn state(&self) -> GameState {
         self.state
     }
@@ -110,12 +171,11 @@ impl Game {
     }
 
     pub fn is_winning_move(&self, col: usize) -> bool {
-        let mut test = self.clone();
-        if let Ok(GameState::Player1Win) | Ok(GameState::Player2Win) = test.play(col) {
-            true
-        } else {
-            false
-        }
+        let mut test = *self;
+        matches!(
+            test.play(col),
+            Ok(GameState::Player1Win) | Ok(GameState::Player2Win)
+        )
     }
 
     fn check_win(&self, pos: usize) -> bool {
@@ -136,11 +196,7 @@ impl Game {
             }
         });
 
-        if count == 3 {
-            true
-        } else {
-            false
-        }
+        count == 3
     }
 
     fn check_win_horizontal(&self, pos: usize) -> bool {
@@ -215,11 +271,7 @@ impl Game {
             }
         }
 
-        if count >= 3 {
-            true
-        } else {
-            false
-        }
+        count >= 3
     }
 
     fn check_win_diagonal_right(&self, pos: usize) -> bool {
@@ -260,11 +312,7 @@ impl Game {
             }
         }
 
-        if count >= 3 {
-            true
-        } else {
-            false
-        }
+        count >= 3
     }
 
     fn get_row(&self, pos: usize) -> usize {
@@ -293,7 +341,7 @@ impl From<&str> for Game {
         value.chars().for_each(|col| {
             // This turns the column value into a base 10 digit, then converts it to a usize. You
             // could also do "col as usize - '0' as usize", which is a fancy ascii hack.
-            game.play(col.to_digit(10).unwrap() as usize);
+            game.play(col.to_digit(10).unwrap() as usize).unwrap();
         });
 
         game
@@ -308,19 +356,19 @@ mod tests {
     fn instantiate_game() {
         let mut x = Game::new();
         assert_eq!(x.can_play(1).unwrap(), 1);
-        assert_eq!(x.play(1), GameState::Ongoing);
+        assert_eq!(x.play(1).unwrap(), GameState::Ongoing);
     }
 
     #[test]
     fn check_win_veritcal() {
         let mut x = Game::from("121212");
-        assert_eq!(x.play(1), GameState::Player1Win);
+        assert_eq!(x.play(1).unwrap(), GameState::Player1Win);
     }
 
     #[test]
     fn check_win_horizontal() {
         let mut x = Game::from("112233");
-        assert_eq!(x.play(4), GameState::Player1Win);
+        assert_eq!(x.play(4).unwrap(), GameState::Player1Win);
     }
 
     #[test]
@@ -333,14 +381,14 @@ mod tests {
         let mut x = Game::from("0112232335");
         let mut y = Game::from("5443323220");
 
-        assert_eq!(x.play(3), GameState::Player1Win);
+        assert_eq!(x.play(3).unwrap(), GameState::Player1Win);
 
-        assert_eq!(y.play(2), GameState::Player1Win);
+        assert_eq!(y.play(2).unwrap(), GameState::Player1Win);
     }
 
     #[test]
     fn fill_board() {
         let mut x = Game::from("123456123456123456");
-        x.play(2);
+        x.play(2).unwrap();
     }
 }

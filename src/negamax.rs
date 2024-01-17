@@ -22,9 +22,9 @@ pub fn negamax(position: &Game, mut alpha: i32, mut beta: i32) -> i32 {
 
     let column_order = [3, 4, 5, 2, 1, 6, 0];
     for i in column_order {
-        if let Some(_) = position.can_play(i) {
-            let mut position2 = position.clone();
-            position2.play(column_order[i]).unwrap();
+        if position.can_play(i).is_some() {
+            let mut position2 = *position;
+            position2.play(i).unwrap();
             let score = -negamax(&position2, -beta, -alpha);
 
             if score >= beta {
