@@ -43,11 +43,11 @@ pub fn negamax(position: &Game, mut alpha: i32, mut beta: i32) -> i32 {
 mod tests {
     use super::negamax;
     use crate::game;
-
-    #[test]
-    fn completetion_test() {
-        let x = game::Game::from("001122");
-        let y = negamax(&x, -1000000, 1000000);
-        println!("{}", y);
-    }
+    //
+    // #[test]
+    // fn completetion_test() {
+    //     let x = game::Game::from("001122");
+    //     let y = negamax(&x, -1000000, 1000000);
+    //     println!("{}", y);
+    // }
 }

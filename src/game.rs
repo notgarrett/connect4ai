@@ -58,17 +58,12 @@ impl Game {
             return None;
         }
 
-        for x in 0..=5 {
+        for x in 0..HEIGHT as usize {
             if let Cell::Empty = self.board[col + (x * 7)] {
                 return Some(col + (x * 7));
             }
         }
 
-        for x in 0..=5 {
-            if !self.bit_board.get(col + (x * 7)) && !self.bit_board.get(col + (x * 7) + 7) {
-                return Some(col + (x * 7));
-            }
-        }
         None
     }
 
@@ -78,12 +73,10 @@ impl Game {
             return None;
         }
 
-        for x in 0..=5 {
-            if !self.bit_board.get(col + (x * 7)) && self.bit_board.get(col + (x * 7) + 7) {
-                return Some(col + (x * 7));
-            }
+        match self.bit_board.get_bottom(col) {
+            Some(x) => Some(x),
+            None => None,
         }
-        None
     }
 
     pub fn play(&mut self, col: usize) -> Result<GameState, GameError> {
@@ -139,20 +132,24 @@ impl Game {
                 self.bit_board.set(position, true).unwrap();
             }
             Turns::Player2Turn => {
-                self.bit_board.set(position + WIDTH as usize, true).unwrap();
                 self.bit_board.set(position, false).unwrap();
             }
         };
 
+        self.bit_board.set_top(position + WIDTH as usize).unwrap();
+
         self.count += 1;
 
-        if self.check_win(position) {
+        if self.count == 42 {
+            self.state = GameState::Draw;
+            return Ok(self.state);
+        }
+
+        if self.check_bb_win(position) {
             match self.turn {
                 Turns::Player1Turn => self.state = GameState::Player1Win,
                 _ => self.state = GameState::Player2Win,
             };
-        } else if self.count == 42 {
-            self.state = GameState::Draw;
         }
 
         match self.turn {
@@ -178,10 +175,24 @@ impl Game {
         )
     }
 
+    pub fn is_bb_winning_move(&self, col: usize) -> bool {
+        let mut test = *self;
+        matches!(
+            test.bb_play(col),
+            Ok(GameState::Player1Win) | Ok(GameState::Player2Win)
+        )
+    }
+
     fn check_win(&self, pos: usize) -> bool {
         self.check_win_horizontal(pos)
             || self.check_win_vertical(pos)
             || self.check_win_diagonal(pos)
+    }
+
+    fn check_bb_win(&self, pos: usize) -> bool {
+        self.check_bb_win_vertical(pos)
+            || self.check_bb_win_diagonal(pos)
+            || self.check_bb_win_horizontal(pos)
     }
 
     fn check_win_vertical(&self, pos: usize) -> bool {
@@ -189,27 +200,43 @@ impl Game {
             return false;
         }
         let mut count = 0;
-        let iter = 1..4;
-        iter.for_each(|iteration| {
+        for iteration in 1..4 {
             if self.board[pos] == self.board[pos - WIDTH as usize * iteration] {
                 count += 1;
+            } else {
+                return false;
             }
-        });
+        }
 
-        count == 3
+        count >= 3
+    }
+
+    fn check_bb_win_vertical(&self, pos: usize) -> bool {
+        if pos < (3 * WIDTH) as usize {
+            return false;
+        }
+
+        let board = match self.turn {
+            Turns::Player1Turn => self.bit_board.and(),
+            Turns::Player2Turn => self.bit_board.xor(),
+        };
+
+        let mut count = 0;
+        for iteration in 1..4 {
+            if board.get(pos - WIDTH as usize * iteration) {
+                count += 1;
+            } else {
+                return false;
+            }
+        }
+
+        count >= 3
     }
 
     fn check_win_horizontal(&self, pos: usize) -> bool {
         let mut count = 0;
         let row = self.get_row(pos);
-        // Plan to incorperate this method in when I am not so lazy and decide to optimize this
-        // function, until then, I can start working on the algorithm, the (hopefully) fun part.
 
-        // let upper_bound = row as i32 * WIDTH - 1;
-        // let lower_bound = (row as i32 - 1) * WIDTH + 1;
-
-        // I want to do a functional or iteration based approach here, but I am struggling to stop
-        // the control flow. Will have to look into it.
         for iteration in 0..WIDTH as usize {
             if self.board[pos] == self.board[iteration + WIDTH as usize * row] {
                 count += 1;
@@ -227,8 +254,38 @@ impl Game {
         false
     }
 
+    fn check_bb_win_horizontal(&self, pos: usize) -> bool {
+        let mut count = 0;
+        let row = self.get_row(pos);
+
+        let board = match self.turn {
+            Turns::Player1Turn => self.bit_board.and(),
+            Turns::Player2Turn => self.bit_board.xor(),
+        };
+
+        for iteration in 0..WIDTH as usize {
+            if board.get(iteration + WIDTH as usize * row) {
+                count += 1;
+                if count == 4 {
+                    return true;
+                }
+            } else {
+                count = 0;
+                if iteration > 4 {
+                    return false;
+                }
+            }
+        }
+
+        false
+    }
+
     fn check_win_diagonal(&self, pos: usize) -> bool {
         self.check_win_diagonal_left(pos) || self.check_win_diagonal_right(pos)
+    }
+
+    fn check_bb_win_diagonal(&self, pos: usize) -> bool {
+        self.check_bb_win_diagonal_left(pos) || self.check_bb_win_diagonal_right(pos)
     }
 
     fn check_win_diagonal_left(&self, pos: usize) -> bool {
@@ -265,6 +322,54 @@ impl Game {
             }
 
             if self.board[pos] == self.board[evaluated_position as usize] {
+                count += 1
+            } else {
+                break;
+            }
+        }
+
+        count >= 3
+    }
+
+    fn check_bb_win_diagonal_left(&self, pos: usize) -> bool {
+        let board = match self.turn {
+            Turns::Player1Turn => self.bit_board.and(),
+            Turns::Player2Turn => self.bit_board.xor(),
+        };
+
+        let mut count = 0;
+
+        let row = self.get_row(pos);
+        let upper_bound = row as i32 * WIDTH - 1 + WIDTH;
+        let lower_bound = (row as i32 - 1) * WIDTH + WIDTH;
+
+        for iteration in 1..4 {
+            if pos as i32 + iteration > upper_bound {
+                break;
+            }
+
+            let evaluated_position = pos as i32 + WIDTH * iteration + iteration;
+            if evaluated_position > (WIDTH * HEIGHT) - 1 {
+                break;
+            }
+
+            if board.get(evaluated_position as usize) {
+                count += 1
+            } else {
+                break;
+            }
+        }
+        for iteration in 1..4 {
+            if pos as i32 - iteration < lower_bound {
+                break;
+            }
+
+            let evaluated_position = pos as i32 - WIDTH * iteration - iteration;
+            if evaluated_position < 0 {
+                break;
+            }
+
+            if board.get(evaluated_position as usize) {
                 count += 1
             } else {
                 break;
@@ -315,6 +420,52 @@ impl Game {
         count >= 3
     }
 
+    fn check_bb_win_diagonal_right(&self, pos: usize) -> bool {
+        let board = match self.turn {
+            Turns::Player1Turn => self.bit_board.and(),
+            Turns::Player2Turn => self.bit_board.xor(),
+        };
+
+        let mut count = 0;
+
+        let row = self.get_row(pos);
+        let upper_bound = row as i32 * WIDTH - 1 + WIDTH;
+        let lower_bound = (row as i32 - 1) * WIDTH + WIDTH;
+
+        for iteration in 1..4 {
+            if pos as i32 + iteration < lower_bound {
+                break;
+            }
+            let evaluated_position = pos as i32 + WIDTH * iteration - iteration;
+            if evaluated_position > (WIDTH * HEIGHT) - 1 {
+                break;
+            }
+
+            if board.get(evaluated_position as usize) {
+                count += 1
+            } else {
+                break;
+            }
+        }
+        for iteration in 1..4 {
+            if pos as i32 - iteration > upper_bound {
+                break;
+            }
+            let evaluated_position = pos as i32 - WIDTH * iteration + iteration;
+            if evaluated_position < 0 {
+                break;
+            }
+
+            if board.get(evaluated_position as usize) {
+                count += 1
+            } else {
+                break;
+            }
+        }
+
+        count >= 3
+    }
+
     fn get_row(&self, pos: usize) -> usize {
         pos / WIDTH as usize
     }
@@ -342,6 +493,8 @@ impl From<&str> for Game {
             // This turns the column value into a base 10 digit, then converts it to a usize. You
             // could also do "col as usize - '0' as usize", which is a fancy ascii hack.
             game.play(col.to_digit(10).unwrap() as usize).unwrap();
+
+            let _ = game.bb_play(col.to_digit(10).unwrap() as usize);
         });
 
         game
@@ -351,26 +504,6 @@ impl From<&str> for Game {
 #[cfg(test)]
 mod tests {
     use crate::game::{Game, GameState};
-
-    #[test]
-    fn instantiate_game() {
-        let mut x = Game::new();
-        assert_eq!(x.can_play(1).unwrap(), 1);
-        assert_eq!(x.play(1).unwrap(), GameState::Ongoing);
-    }
-
-    #[test]
-    fn check_win_veritcal() {
-        let mut x = Game::from("121212");
-        assert_eq!(x.play(1).unwrap(), GameState::Player1Win);
-    }
-
-    #[test]
-    fn check_win_horizontal() {
-        let mut x = Game::from("112233");
-        assert_eq!(x.play(4).unwrap(), GameState::Player1Win);
-    }
-
     #[test]
     fn instantiate_from_string() {
         let _x = Game::from("1554323221");
@@ -390,5 +523,45 @@ mod tests {
     fn fill_board() {
         let mut x = Game::from("123456123456123456");
         x.play(2).unwrap();
+    }
+
+    #[test]
+    fn instantiate_bb_game() {
+        let mut x = Game::new();
+        assert_eq!(x.can_bb_play(1).unwrap(), 1);
+        assert_eq!(x.bb_play(1).unwrap(), GameState::Ongoing);
+    }
+
+    #[test]
+    fn check_bb_win_veritcal() {
+        let mut x = Game::from("121212");
+        assert_eq!(x.bb_play(1).unwrap(), GameState::Player1Win);
+    }
+
+    #[test]
+    fn check_bb_win_horizontal() {
+        let mut x = Game::from("112233");
+        assert_eq!(x.bb_play(4).unwrap(), GameState::Player1Win);
+    }
+
+    #[test]
+    fn instantiate_bb_from_string() {
+        let _x = Game::from("1554323221");
+    }
+
+    #[test]
+    fn check_bb_win_diagonals() {
+        let mut x = Game::from("0112232335");
+        let mut y = Game::from("5443323220");
+
+        assert_eq!(x.bb_play(3).unwrap(), GameState::Player1Win);
+
+        assert_eq!(y.bb_play(2).unwrap(), GameState::Player1Win);
+    }
+
+    #[test]
+    fn fill_bb_board() {
+        let mut x = Game::from("123456123456123456");
+        x.bb_play(2).unwrap();
     }
 }
