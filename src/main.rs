@@ -1,4 +1,4 @@
-mod bitboard;
+mod bitstring;
 mod game;
 mod negamax;
 

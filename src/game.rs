@@ -1,4 +1,4 @@
-use crate::bitboard::Bitboard;
+use crate::bitstring::BitString
 
 pub const WIDTH: i32 = 7;
 pub const HEIGHT: i32 = 6;
@@ -28,7 +28,8 @@ pub enum Turns {
 
 #[derive(Clone, Copy)]
 pub struct Game {
-    bit_board: Bitboard,
+    bit_board: BitString,
+    bit_mask: BitString,
     board: [Cell; (WIDTH * HEIGHT) as usize],
     state: GameState,
     turn: Turns,
@@ -44,12 +45,13 @@ pub enum GameError {
 impl Game {
     pub fn new() -> Self {
         Self {
-            bit_board: Bitboard::new(),
+            bit_board: BitString::new(),
+            bit_mask: BitString::new(),
             board: [Cell::Empty; (WIDTH * HEIGHT) as usize],
             state: GameState::Ongoing,
             turn: Turns::Player1Turn,
             count: 0,
-        }
+}
     }
 
     pub fn can_play(&self, col: usize) -> Option<usize> {
@@ -78,45 +80,6 @@ impl Game {
             None => None,
         }
     }
-
-    pub fn play(&mut self, col: usize) -> Result<GameState, GameError> {
-        if col > (WIDTH * HEIGHT) as usize {
-            return Err(GameError::OutOfBounds);
-        }
-
-        let position = match self.can_play(col) {
-            Some(x) => x,
-            None => return Err(GameError::CannotPlay),
-        };
-
-        match self.turn {
-            Turns::Player1Turn => {
-                self.board[position] = Cell::Player1;
-            }
-            Turns::Player2Turn => {
-                self.board[position] = Cell::Player2;
-            }
-        };
-
-        self.count += 1;
-
-        if self.check_win(position) {
-            match self.turn {
-                Turns::Player1Turn => self.state = GameState::Player1Win,
-                _ => self.state = GameState::Player2Win,
-            };
-        } else if self.count == 42 {
-            self.state = GameState::Draw;
-        }
-
-        match self.turn {
-            Turns::Player1Turn => self.turn = Turns::Player2Turn,
-            _ => self.turn = Turns::Player1Turn,
-        };
-
-        Ok(self.state)
-    }
-
     pub fn bb_play(&mut self, col: usize) -> Result<GameState, GameError> {
         if col > (WIDTH * HEIGHT) as usize {
             return Err(GameError::OutOfBounds);
@@ -507,16 +470,6 @@ mod tests {
     #[test]
     fn instantiate_from_string() {
         let _x = Game::from("1554323221");
-    }
-
-    #[test]
-    fn check_win_diagonals() {
-        let mut x = Game::from("0112232335");
-        let mut y = Game::from("5443323220");
-
-        assert_eq!(x.play(3).unwrap(), GameState::Player1Win);
-
-        assert_eq!(y.play(2).unwrap(), GameState::Player1Win);
     }
 
     #[test]
